@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const supabase = require('./config/supabase');
+const loanAnalysisRoutes = require("./routes/loanAnalysis.routes");
 
 const app = express();
 
@@ -37,6 +38,50 @@ app.get("/api/test-db", async (req, res) => {
       error: error.message,
     });
   }
+});
+
+app.get("/api/test-loan", (req, res) => {
+  const calculateLoan = require("./services/loanCalculator");
+
+  const result = calculateLoan({
+    loan_amount: 500000,
+    interest_rate: 10.5,
+    tenure_months: 60,
+    processing_fee: 8500,
+    insurance_cost: 12000,
+    documentation_fee: 2000,
+    other_charges: 1500,
+  });
+
+  res.json({
+    success: true,
+    data: result,
+  });
+});
+
+app.use("/api/loan-analyses", loanAnalysisRoutes);
+
+
+app.post("/api/test-login", async (req, res) => {
+  const { email, password } = req.body;
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+
+  return res.json({
+    success: true,
+    access_token: data.session.access_token,
+    user: data.user,
+  });
 });
 
 module.exports = app
