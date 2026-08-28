@@ -140,6 +140,45 @@ const createLoanAnalysis = async (req, res) => {
   }
 };
 
+const getLoanAnalyses = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+
+    const supabase = createAuthenticatedSupabaseClient(token);
+
+    const { data, error } = await supabase
+      .from("loan_analyses")
+      .select(`
+        *,
+        analysis_results (*),
+        findings (*)
+      `)
+      .eq("user_id", req.user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (error) {
+    console.error("Get loan analyses error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch loan analyses",
+      error: error.message,
+    });
+  }
+};
+
+
+
 module.exports = {
   createLoanAnalysis,
+  getLoanAnalyses,
 };
