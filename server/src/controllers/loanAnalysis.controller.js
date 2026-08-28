@@ -214,10 +214,60 @@ const getLoanAnalysisById = async (req, res) => {
   }
 };
 
+const deleteLoanAnalysis = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const token = req.headers.authorization.split(" ")[1];
+
+    const supabase = createAuthenticatedSupabaseClient(token);
+
+    // First verify that this analysis belongs to the logged-in user
+    const { data: loanAnalysis, error: findError } = await supabase
+      .from("loan_analyses")
+      .select("id")
+      .eq("id", id)
+      .eq("user_id", req.user.id)
+      .single();
+
+    if (findError || !loanAnalysis) {
+      return res.status(404).json({
+        success: false,
+        message: "Loan analysis not found",
+      });
+    }
+
+    // Delete the loan analysis
+    const { error: deleteError } = await supabase
+      .from("loan_analyses")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", req.user.id);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Loan analysis deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete loan analysis error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete loan analysis",
+      error: error.message,
+    });
+  }
+};
+
 
 
 module.exports = {
   createLoanAnalysis,
   getLoanAnalyses,
   getLoanAnalysisById,
+  deleteLoanAnalysis,
 };
