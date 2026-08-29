@@ -2,6 +2,10 @@ const {
   parseFinancialDocument,
 } = require("./aiDocumentParser");
 
+const {
+  normalizeFinancialDocument,
+} = require("./documentNormalizer");
+
 const analyzeDocument = async (documentText) => {
   if (!documentText || !documentText.trim()) {
     throw new Error("Document text is required");
@@ -25,7 +29,8 @@ const analyzeDocument = async (documentText) => {
     throw new Error("AI returned invalid financial data");
   }
 
-  return parsedResult;
+  const normalizedResult = normalizeFinancialDocument(parsedResult);
+  return normalizedResult;
 };
 
 module.exports = {

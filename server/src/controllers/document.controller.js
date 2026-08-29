@@ -1,5 +1,6 @@
 const { createClient } = require("@supabase/supabase-js");
 const { extractTextFromPdf } = require("../services/documentExtractor");
+const { analyzeDocument } = require("../services/documentAnalyzer");
 
 const createUserSupabase = (token) => {
   return createClient(
@@ -84,11 +85,35 @@ const uploadDocument = async (req, res) => {
     console.log("Pages:", extracted.pages);
     console.log("Characters:", extracted.text.length);
 
+    console.log("STEP 3: Analyzing document with Gemini");
+
+    const analysis = await analyzeDocument(extracted.text);
+
+    console.log("STEP 3 SUCCESS: Gemini analysis completed");
+
+    const { data: documentAnalysis, error: analysisError } =
+      await supabase
+        .from("document_analyses")
+        .insert({
+          document_id: data.id,
+          document_type: analysis.documentType,
+          extracted_data: analysis,
+        })
+        .select()
+        .single();
+
+    if (analysisError) {
+      throw analysisError;
+    }
+
+    console.log("STEP 4 SUCCESS: AI analysis saved");
+
     // Update document status
     const { error: updateError } = await supabase
       .from("documents")
       .update({
-        status: "processing",
+        status: "completed",
+        document_type: analysis.documentType,
       })
       .eq("id", data.id);
 
@@ -98,9 +123,14 @@ const uploadDocument = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Document uploaded and text extracted successfully",
+      message: "Document uploaded and analyzed successfully",
       data: {
-        document: data,
+        document: {
+          data,
+          status: "completed",
+          document_type: analysis.documentType,
+        },
+        analysis: documentAnalysis,
         extractedText: extracted.text,
         pages: extracted.pages,
       },
