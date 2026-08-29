@@ -2,11 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const supabase = require('./config/supabase');
 const loanAnalysisRoutes = require("./routes/loanAnalysis.routes");
+const documentRoutes = require("./routes/document.routes");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/loan-analyses", loanAnalysisRoutes);
+app.use("/api/documents", documentRoutes);
 
 app.get('/', (req, res) => {
   res.json({
