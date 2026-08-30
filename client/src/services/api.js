@@ -3,12 +3,8 @@ import { supabase } from "../lib/supabase";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
-// Automatically attach the Supabase access token
 api.interceptors.request.use(async (config) => {
   const {
     data: { session },
