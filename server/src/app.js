@@ -6,9 +6,13 @@ const documentRoutes = require("./routes/document.routes");
 
 const app = express();
 
+app.use((req, res, next) => {
+  console.log("REQUEST RECEIVED:", req.method, req.url);
+  next();
+});
+
 app.use(cors());
 app.use(express.json());
-app.use("/api/loan-analyses", loanAnalysisRoutes);
 app.use("/api/documents", documentRoutes);
 
 app.get('/', (req, res) => {
