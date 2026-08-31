@@ -1,15 +1,16 @@
-const { PDFParse } = require("pdf-parse");
+const { extractText } = require("unpdf");
 
 const extractTextFromPdf = async (buffer) => {
   if (!buffer) {
     throw new Error("PDF buffer is required");
   }
 
-  const parser = new PDFParse({ data: buffer });
-
-  const result = await parser.getText();
-
-  await parser.destroy();
+  const result = await extractText(
+    new Uint8Array(buffer),
+    {
+      mergePages: true,
+    }
+  );
 
   if (!result.text || !result.text.trim()) {
     throw new Error(
@@ -19,7 +20,7 @@ const extractTextFromPdf = async (buffer) => {
 
   return {
     text: result.text.trim(),
-    pages: result.total,
+    pages: result.totalPages,
   };
 };
 
