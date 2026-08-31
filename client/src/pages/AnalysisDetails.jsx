@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getLoanAnalysisById } from "../services/loanAnalysis";
 
+const formatCurrency = (value) => {
+  return `₹${Number(value || 0).toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+  })}`;
+};
+
 const AnalysisDetails = () => {
   const { id } = useParams();
 
@@ -12,11 +18,18 @@ const AnalysisDetails = () => {
   useEffect(() => {
     const loadAnalysis = async () => {
       try {
+        setLoading(true);
+
         const response = await getLoanAnalysisById(id);
+
         setAnalysis(response.data);
       } catch (error) {
-        console.error(error);
-        setError("Failed to load loan analysis.");
+        console.error("Failed to load analysis:", error);
+
+        setError(
+          error.response?.data?.message ||
+          "Failed to load loan analysis."
+        );
       } finally {
         setLoading(false);
       }
@@ -26,15 +39,42 @@ const AnalysisDetails = () => {
   }, [id]);
 
   if (loading) {
-    return <main className="analysis-page">Loading analysis...</main>;
+    return (
+      <main className="analysis-page">
+        <div className="analysis-loading">
+          <div className="analysis-loading-spinner" />
+          <h2>Loading your analysis...</h2>
+          <p>Preparing your ClearFi report.</p>
+        </div>
+      </main>
+    );
   }
 
   if (error) {
-    return <main className="analysis-page">{error}</main>;
+    return (
+      <main className="analysis-page">
+        <div className="analysis-error-page">
+          <h2>Unable to load analysis</h2>
+          <p>{error}</p>
+          <Link to="/dashboard" className="analysis-action-button">
+            Back to Dashboard
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   if (!analysis) {
-    return <main className="analysis-page">Analysis not found.</main>;
+    return (
+      <main className="analysis-page">
+        <div className="analysis-error-page">
+          <h2>Analysis not found</h2>
+          <Link to="/dashboard" className="analysis-action-button">
+            Back to Dashboard
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   const result = analysis.analysis_results;
@@ -56,238 +96,352 @@ const AnalysisDetails = () => {
         ? "score-warning"
         : "score-danger";
 
-  const totalCharges = Number(
+  const loanAmount = Number(analysis.loan_amount || 0);
+  const totalInterest = Number(result?.total_interest || 0);
+  const totalRepayment = Number(result?.total_repayment || 0);
+  const emi = Number(result?.emi || 0);
+  const upfrontCharges = Number(
     result?.total_upfront_charges || 0
   );
-
   const actualReceived = Number(
     result?.actual_amount_received || 0
   );
 
-  const loanAmount = Number(analysis.loan_amount || 0);
-
-  const interest = Number(
-    result?.total_interest || 0
-  );
+  const chargePercentage =
+    loanAmount > 0
+      ? ((upfrontCharges / loanAmount) * 100).toFixed(1)
+      : "0";
 
   return (
     <main className="analysis-page">
-      <Link className="back-link" to="/dashboard">
-        ← Back to Dashboard
-      </Link>
+      <div className="analysis-container">
 
-      {/* Header */}
-      <section className="analysis-header">
-        <div>
-          <p className="eyebrow">LOAN ANALYSIS</p>
+        {/* Back */}
+        <Link className="back-link" to="/dashboard">
+          ← Back to Dashboard
+        </Link>
 
-          <h1>{analysis.lender_name}</h1>
+        {/* Header */}
+        <section className="analysis-header">
+          <div className="analysis-title">
+            <p className="eyebrow">LOAN ANALYSIS</p>
 
-          <p>
-            Here's what this loan actually costs you.
-          </p>
-        </div>
+            <h1>{analysis.lender_name}</h1>
 
-        <div className={`score-card ${scoreClass}`}>
-          <span>Transparency Score</span>
-
-          <strong>{score}/100</strong>
-
-          <small>{scoreLabel}</small>
-        </div>
-      </section>
-
-      {/* Loan overview */}
-      <section className="report-card">
-        <h2>Loan Overview</h2>
-
-        <div className="stats-grid">
-          <div>
-            <span>Loan Amount</span>
-            <strong>
-              ₹{loanAmount.toLocaleString("en-IN")}
-            </strong>
+            <p>
+              Here's what this loan could cost you.
+            </p>
           </div>
 
-          <div>
+          <div className={`score-card ${scoreClass}`}>
+            <span>Transparency Score</span>
+
+            <strong>{score}</strong>
+
+            <small>/ 100</small>
+
+            <div className="score-label">
+              {scoreLabel}
+            </div>
+          </div>
+        </section>
+
+        {/* Overview */}
+        <section className="overview-grid">
+
+          <div className="overview-card">
+            <span>Loan Amount</span>
+            <strong>{formatCurrency(loanAmount)}</strong>
+          </div>
+
+          <div className="overview-card">
             <span>Interest Rate</span>
             <strong>{analysis.interest_rate}%</strong>
           </div>
 
-          <div>
+          <div className="overview-card">
             <span>Tenure</span>
             <strong>{analysis.tenure_months} months</strong>
           </div>
 
-          <div>
+          <div className="overview-card primary-overview">
             <span>Monthly EMI</span>
+            <strong>{formatCurrency(emi)}</strong>
+          </div>
+
+        </section>
+
+        {/* Real Cost */}
+        <section className="report-card">
+
+          <div className="section-heading">
+            <div>
+              <p className="section-eyebrow">
+                REAL COST
+              </p>
+
+              <h2>What You'll Actually Pay</h2>
+            </div>
+          </div>
+
+          <div className="cost-breakdown">
+
+            <div className="cost-row">
+              <div>
+                <span>Principal</span>
+                <small>Amount borrowed</small>
+              </div>
+
+              <strong>
+                {formatCurrency(loanAmount)}
+              </strong>
+            </div>
+
+            <div className="cost-row">
+              <div>
+                <span>Total Interest</span>
+                <small>Interest over the full tenure</small>
+              </div>
+
+              <strong>
+                {formatCurrency(totalInterest)}
+              </strong>
+            </div>
+
+            <div className="cost-row">
+              <div>
+                <span>Upfront Charges</span>
+                <small>Fees deducted before receiving the loan</small>
+              </div>
+
+              <strong>
+                {formatCurrency(upfrontCharges)}
+              </strong>
+            </div>
+
+            <div className="cost-total">
+              <div>
+                <span>Total Repayment</span>
+                <small>Principal + interest</small>
+              </div>
+
+              <strong>
+                {formatCurrency(totalRepayment)}
+              </strong>
+            </div>
+
+          </div>
+        </section>
+
+        {/* Advertised vs Actual */}
+        <section className="report-card actual-card">
+
+          <div className="section-heading">
+            <div>
+              <p className="section-eyebrow">
+                MONEY YOU RECEIVE
+              </p>
+
+              <h2>Advertised vs. Actual</h2>
+            </div>
+          </div>
+
+          <div className="actual-comparison">
+
+            <div className="actual-box advertised">
+              <span>Advertised Loan</span>
+
+              <strong>
+                {formatCurrency(loanAmount)}
+              </strong>
+            </div>
+
+            <div className="comparison-arrow">
+              →
+            </div>
+
+            <div className="actual-box received">
+              <span>You Actually Receive</span>
+
+              <strong>
+                {formatCurrency(actualReceived)}
+              </strong>
+            </div>
+
+          </div>
+
+          <div className="deduction-message">
             <strong>
-              ₹{Number(result?.emi || 0).toLocaleString("en-IN")}
-            </strong>
-          </div>
-        </div>
-      </section>
+              {formatCurrency(upfrontCharges)}
+            </strong>{" "}
+            is deducted through upfront charges before
+            you receive the loan.
 
-      {/* True cost */}
-      <section className="report-card">
-        <h2>What You'll Actually Pay</h2>
-
-        <div className="cost-list">
-          <div>
-            <span>Principal</span>
-            <strong>
-              ₹{loanAmount.toLocaleString("en-IN")}
-            </strong>
+            <span>
+              That's {chargePercentage}% of the advertised
+              loan amount.
+            </span>
           </div>
 
-          <div>
-            <span>Total Interest</span>
-            <strong>
-              ₹{interest.toLocaleString("en-IN")}
-            </strong>
+        </section>
+
+        {/* Charges */}
+        <section className="report-card">
+
+          <div className="section-heading">
+            <div>
+              <p className="section-eyebrow">
+                FEE BREAKDOWN
+              </p>
+
+              <h2>Upfront Charges</h2>
+            </div>
+
+            <div className="charge-total-badge">
+              {formatCurrency(upfrontCharges)}
+            </div>
           </div>
 
-          <div>
-            <span>Total Repayment</span>
-            <strong>
-              ₹{Number(result?.total_repayment || 0).toLocaleString(
-                "en-IN"
-              )}
-            </strong>
-          </div>
-        </div>
-      </section>
+          <div className="charge-grid">
 
-      {/* Advertised vs actual */}
-      <section className="report-card highlight-card">
-        <h2>Advertised vs. Actual</h2>
+            <div className="charge-card">
+              <span>Processing Fee</span>
+              <strong>
+                {formatCurrency(analysis.processing_fee)}
+              </strong>
+            </div>
 
-        <div className="comparison">
-          <div>
-            <span>Loan Amount</span>
-            <strong>
-              ₹{loanAmount.toLocaleString("en-IN")}
-            </strong>
-          </div>
+            <div className="charge-card">
+              <span>Insurance</span>
+              <strong>
+                {formatCurrency(analysis.insurance_cost)}
+              </strong>
+            </div>
 
-          <div className="arrow">→</div>
+            <div className="charge-card">
+              <span>Documentation</span>
+              <strong>
+                {formatCurrency(
+                  analysis.documentation_fee
+                )}
+              </strong>
+            </div>
 
-          <div>
-            <span>You Actually Receive</span>
-            <strong>
-              ₹{actualReceived.toLocaleString("en-IN")}
-            </strong>
-          </div>
-        </div>
+            <div className="charge-card">
+              <span>Other Charges</span>
+              <strong>
+                {formatCurrency(analysis.other_charges)}
+              </strong>
+            </div>
 
-        <p>
-          ₹{totalCharges.toLocaleString("en-IN")} is deducted
-          through upfront charges before you receive the loan.
-        </p>
-      </section>
-
-      {/* Charges */}
-      <section className="report-card">
-        <h2>Upfront Charges</h2>
-
-        <div className="charge-list">
-          <div>
-            <span>Processing Fee</span>
-            <strong>
-              ₹{Number(analysis.processing_fee || 0).toLocaleString(
-                "en-IN"
-              )}
-            </strong>
           </div>
 
-          <div>
-            <span>Insurance</span>
-            <strong>
-              ₹{Number(analysis.insurance_cost || 0).toLocaleString(
-                "en-IN"
-              )}
-            </strong>
+        </section>
+
+        {/* Findings */}
+        <section className="report-card">
+
+          <div className="section-heading">
+            <div>
+              <p className="section-eyebrow">
+                RISK CHECK
+              </p>
+
+              <h2>Potential Issues</h2>
+            </div>
+
+            <span className="finding-count">
+              {findings.length} detected
+            </span>
           </div>
 
-          <div>
-            <span>Documentation</span>
-            <strong>
-              ₹{Number(
-                analysis.documentation_fee || 0
-              ).toLocaleString("en-IN")}
-            </strong>
+          {findings.length === 0 ? (
+            <div className="no-findings">
+              <div className="success-icon">
+                ✓
+              </div>
+
+              <div>
+                <strong>
+                  No major issues detected
+                </strong>
+
+                <p>
+                  ClearFi didn't identify any of the
+                  current warning patterns in this loan.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="findings-list">
+
+              {findings.map((finding) => (
+                <article
+                  className={`finding ${finding.severity}`}
+                  key={finding.id}
+                >
+                  <div className="finding-icon">
+                    ⚠
+                  </div>
+
+                  <div className="finding-content">
+
+                    <div className="finding-title-row">
+                      <strong>
+                        {finding.title}
+                      </strong>
+
+                      <span className="finding-severity">
+                        {finding.severity.toUpperCase()}
+                      </span>
+                    </div>
+
+                    <p>
+                      {finding.description}
+                    </p>
+
+                  </div>
+                </article>
+              ))}
+
+            </div>
+          )}
+
+        </section>
+
+        {/* Meaning */}
+        <section className="report-card explanation-card">
+
+          <p className="section-eyebrow">
+            CLEARFI EXPLAINED
+          </p>
+
+          <h2>What does this mean?</h2>
+
+          <p>
+            ClearFi analyzes the loan amount, interest,
+            fees, and additional charges to help you
+            understand the potential cost of borrowing.
+          </p>
+
+          <p>
+            This offer received a{" "}
+            <strong>{score}/100</strong> transparency
+            score based on the warning patterns detected
+            in the provided information.
+          </p>
+
+          <div className="disclaimer">
+            ClearFi provides an informational analysis
+            based on the information available in the
+            uploaded document. Always review the final
+            loan agreement and applicable terms before
+            making a financial decision.
           </div>
 
-          <div>
-            <span>Other Charges</span>
-            <strong>
-              ₹{Number(analysis.other_charges || 0).toLocaleString(
-                "en-IN"
-              )}
-            </strong>
-          </div>
+        </section>
 
-          <div className="total-row">
-            <span>Total Upfront Charges</span>
-            <strong>
-              ₹{totalCharges.toLocaleString("en-IN")}
-            </strong>
-          </div>
-        </div>
-      </section>
-
-      {/* Findings */}
-      <section className="report-card">
-        <h2>Potential Issues</h2>
-
-        {findings.length === 0 ? (
-          <div className="no-findings">
-            <strong>No major issues detected</strong>
-            <p>
-              ClearFi didn't identify any of the current
-              warning patterns in this loan.
-            </p>
-          </div>
-        ) : (
-          <div className="findings-list">
-            {findings.map((finding) => (
-              <article
-                className={`finding ${finding.severity}`}
-                key={finding.id}
-              >
-                <div className="finding-icon">⚠️</div>
-
-                <div>
-                  <strong>{finding.title}</strong>
-
-                  <span className="finding-severity">
-                    {finding.severity.toUpperCase()}
-                  </span>
-
-                  <p>{finding.description}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Explanation */}
-      <section className="report-card explanation-card">
-        <h2>What does this mean?</h2>
-
-        <p>
-          ClearFi analyzes the advertised loan amount,
-          interest, fees, and additional charges to show
-          you the real cost of borrowing.
-        </p>
-
-        <p>
-          A transparency score of <strong>{score}/100</strong>{" "}
-          reflects the potential cost and warning patterns
-          detected in this loan offer.
-        </p>
-      </section>
+      </div>
     </main>
   );
 };

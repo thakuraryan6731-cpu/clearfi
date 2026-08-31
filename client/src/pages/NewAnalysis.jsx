@@ -32,7 +32,7 @@ const NewAnalysis = () => {
   };
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
+    const selectedFile = e.target.files?.[0];
 
     if (!selectedFile) {
       setFile(null);
@@ -112,7 +112,7 @@ const NewAnalysis = () => {
 
       navigate(`/analysis/${response.data.loanAnalysis.id}`);
     } catch (error) {
-      console.error(error);
+      console.error("Manual analysis error:", error);
 
       setError(
         error.response?.data?.message ||
@@ -124,133 +124,304 @@ const NewAnalysis = () => {
   };
 
   return (
-    <main>
-      <h1>Analyze a New Loan</h1>
+    <main className="new-analysis-page">
+      <div className="new-analysis-container">
 
-      <p>
-        Upload your loan offer PDF and let ClearFi
-        automatically analyze it, or enter the details
-        manually.
-      </p>
+        {/* Header */}
+        <header className="new-analysis-header">
+          <div className="eyebrow">CLEARFI ANALYSIS</div>
 
-      {/* PDF Upload */}
-      <section>
-        <h2>Upload Loan Offer</h2>
+          <h1>Analyze Your Loan</h1>
 
-        <form onSubmit={handlePdfUpload}>
-          <input
-            type="file"
-            accept="application/pdf,.pdf"
-            onChange={handleFileChange}
-          />
+          <p>
+            Upload your loan offer and let ClearFi uncover
+            the real cost, hidden charges, and potential
+            risks before you commit.
+          </p>
+        </header>
 
-          {file && (
-            <p>
-              Selected file: <strong>{file.name}</strong>
-            </p>
-          )}
+        {/* PDF Upload */}
+        <section className="analysis-section">
+          <h2>Upload Loan Offer</h2>
 
-          <button
-            type="submit"
-            disabled={loading || !file}
+          <p className="section-description">
+            The fastest way to analyze your loan.
+            ClearFi will automatically extract the
+            financial details from your PDF.
+          </p>
+
+          <form onSubmit={handlePdfUpload}>
+            <div
+              className={`upload-zone ${file ? "has-file" : ""
+                }`}
+            >
+              <div className="upload-icon">
+                📄
+              </div>
+
+              {!file ? (
+                <>
+                  <h3>Upload your loan PDF</h3>
+
+                  <p>
+                    PDF files only · Maximum size 10 MB
+                  </p>
+
+                  <label
+                    htmlFor="loan-pdf"
+                    className="choose-file-button"
+                  >
+                    Choose PDF
+                  </label>
+                </>
+              ) : (
+                <>
+                  <h3>PDF ready for analysis</h3>
+
+                  <p>
+                    Your document has been selected.
+                  </p>
+
+                  <label
+                    htmlFor="loan-pdf"
+                    className="choose-file-button"
+                  >
+                    Choose Another PDF
+                  </label>
+
+                  <div className="file-info">
+                    <div>
+                      <div className="file-name">
+                        📄 {file.name}
+                      </div>
+
+                      <div className="file-size">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <input
+                id="loan-pdf"
+                className="file-input"
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={handleFileChange}
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={loading || !file}
+            >
+              {loading ? (
+                <span className="analyzing-state">
+                  <span className="loading-spinner" />
+                  Analyzing your loan...
+                </span>
+              ) : (
+                "Analyze PDF"
+              )}
+            </button>
+          </form>
+        </section>
+
+        {/* Divider */}
+        <div className="analysis-divider">
+          <span>or enter manually</span>
+        </div>
+
+        {/* Manual Analysis */}
+        <section className="analysis-section">
+          <h2>Enter Loan Details</h2>
+
+          <p className="section-description">
+            Prefer to enter the numbers yourself?
+            You can analyze a loan manually.
+          </p>
+
+          <form
+            className="manual-form"
+            onSubmit={handleSubmit}
           >
-            {loading ? "Analyzing PDF..." : "Analyze PDF"}
-          </button>
-        </form>
-      </section>
+            <div className="form-group">
+              <label htmlFor="lender_name">
+                Lender Name
+              </label>
 
-      <hr />
+              <input
+                id="lender_name"
+                name="lender_name"
+                placeholder="e.g. Sample Finance Bank"
+                value={form.lender_name}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-      {/* Manual Analysis */}
-      <section>
-        <h2>Or Enter Details Manually</h2>
+            <div className="form-group">
+              <label htmlFor="loan_amount">
+                Loan Amount
+              </label>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            name="lender_name"
-            placeholder="Lender name"
-            value={form.lender_name}
-            onChange={handleChange}
-            required
-          />
+              <input
+                id="loan_amount"
+                name="loan_amount"
+                type="number"
+                min="1"
+                placeholder="e.g. 500000"
+                value={form.loan_amount}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <input
-            name="loan_amount"
-            type="number"
-            placeholder="Loan amount"
-            value={form.loan_amount}
-            onChange={handleChange}
-            required
-          />
+            <div className="form-group">
+              <label htmlFor="interest_rate">
+                Interest Rate (%)
+              </label>
 
-          <input
-            name="interest_rate"
-            type="number"
-            step="0.01"
-            placeholder="Interest rate (%)"
-            value={form.interest_rate}
-            onChange={handleChange}
-            required
-          />
+              <input
+                id="interest_rate"
+                name="interest_rate"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 10.5"
+                value={form.interest_rate}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <input
-            name="tenure_months"
-            type="number"
-            placeholder="Tenure (months)"
-            value={form.tenure_months}
-            onChange={handleChange}
-            required
-          />
+            <div className="form-group">
+              <label htmlFor="tenure_months">
+                Tenure (Months)
+              </label>
 
-          <h3>Additional Charges</h3>
+              <input
+                id="tenure_months"
+                name="tenure_months"
+                type="number"
+                min="1"
+                placeholder="e.g. 60"
+                value={form.tenure_months}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <input
-            name="processing_fee"
-            type="number"
-            placeholder="Processing fee"
-            value={form.processing_fee}
-            onChange={handleChange}
-          />
+            <h3 className="charges-title">
+              Additional Charges
+            </h3>
 
-          <input
-            name="insurance_cost"
-            type="number"
-            placeholder="Insurance cost"
-            value={form.insurance_cost}
-            onChange={handleChange}
-          />
+            <div className="form-group">
+              <label htmlFor="processing_fee">
+                Processing Fee
+              </label>
 
-          <input
-            name="documentation_fee"
-            type="number"
-            placeholder="Documentation fee"
-            value={form.documentation_fee}
-            onChange={handleChange}
-          />
+              <input
+                id="processing_fee"
+                name="processing_fee"
+                type="number"
+                min="0"
+                placeholder="0"
+                value={form.processing_fee}
+                onChange={handleChange}
+              />
+            </div>
 
-          <input
-            name="other_charges"
-            type="number"
-            placeholder="Other charges"
-            value={form.other_charges}
-            onChange={handleChange}
-          />
+            <div className="form-group">
+              <label htmlFor="insurance_cost">
+                Insurance Cost
+              </label>
 
-          <input
-            name="prepayment_charge"
-            type="number"
-            placeholder="Prepayment charge"
-            value={form.prepayment_charge}
-            onChange={handleChange}
-          />
+              <input
+                id="insurance_cost"
+                name="insurance_cost"
+                type="number"
+                min="0"
+                placeholder="0"
+                value={form.insurance_cost}
+                onChange={handleChange}
+              />
+            </div>
 
-          <button type="submit" disabled={loading}>
-            {loading ? "Analyzing..." : "Analyze Loan"}
-          </button>
-        </form>
-      </section>
+            <div className="form-group">
+              <label htmlFor="documentation_fee">
+                Documentation Fee
+              </label>
 
-      {error && <p>{error}</p>}
+              <input
+                id="documentation_fee"
+                name="documentation_fee"
+                type="number"
+                min="0"
+                placeholder="0"
+                value={form.documentation_fee}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="other_charges">
+                Other Charges
+              </label>
+
+              <input
+                id="other_charges"
+                name="other_charges"
+                type="number"
+                min="0"
+                placeholder="0"
+                value={form.other_charges}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="prepayment_charge">
+                Prepayment Charge
+              </label>
+
+              <input
+                id="prepayment_charge"
+                name="prepayment_charge"
+                type="number"
+                min="0"
+                placeholder="0"
+                value={form.prepayment_charge}
+                onChange={handleChange}
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="analyzing-state">
+                  <span className="loading-spinner" />
+                  Analyzing...
+                </span>
+              ) : (
+                "Analyze Loan"
+              )}
+            </button>
+          </form>
+        </section>
+
+        {/* Error */}
+        {error && (
+          <div className="analysis-error">
+            {error}
+          </div>
+        )}
+      </div>
     </main>
   );
 };
