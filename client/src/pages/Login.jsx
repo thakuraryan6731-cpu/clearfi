@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -8,8 +9,10 @@ const Login = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,38 +31,116 @@ const Login = () => {
     navigate("/dashboard");
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      setError("");
+      setGoogleLoading(true);
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: "http://localhost:5173/dashboard",
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+        setGoogleLoading(false);
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
+      setError("Unable to continue with Google.");
+      setGoogleLoading(false);
+    }
+  };
+
   return (
-    <div>
-      <h1>Login to ClearFi</h1>
+    <div className="auth-page">
+      <div className="auth-card">
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+        <div className="auth-header">
+          <div className="auth-logo">
+            C
+          </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+          <p className="auth-eyebrow">
+            CLEARFI
+          </p>
 
-        {error && <p>{error}</p>}
+          <h1>Welcome back</h1>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
+          <p>
+            Login to continue analyzing your loans.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="google-button"
+          onClick={handleGoogleLogin}
+          disabled={googleLoading || loading}
+        >
+          <span className="google-icon">G</span>
+
+          {googleLoading
+            ? "Connecting..."
+            : "Continue with Google"}
         </button>
-      </form>
 
-      <p>
-        Don't have an account?{" "}
-        <Link to="/signup">Create account</Link>
-      </p>
+        <div className="auth-divider">
+          <span>OR</span>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+
+          <div className="auth-form-group">
+            <label>Email</label>
+
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="auth-form-group">
+            <label>Password</label>
+
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="auth-error">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="auth-primary-button"
+            disabled={loading || googleLoading}
+          >
+            {loading ? "Logging in..." : "Login"}
+          </button>
+
+        </form>
+
+        <p className="auth-footer">
+          Don't have an account?{" "}
+          <Link to="/signup">
+            Create account
+          </Link>
+        </p>
+
+      </div>
     </div>
   );
 };
